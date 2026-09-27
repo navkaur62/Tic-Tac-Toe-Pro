@@ -21,7 +21,7 @@ from src.constants import (
     PLAYER_O,
 )
 
-
+from src.ai import get_ai_move
 # ============================================================
 # INITIALIZATION
 # ============================================================
@@ -981,115 +981,21 @@ def check_winner_for_board(board_state):
     return None, []
 
 
+# ============================================================
+# COMPUTER MOVE
+# ============================================================
+
 def computer_move():
 
     global current_turn
 
-    empty_cells = [
-        i
-        for i, value in enumerate(board)
-        if value == ""
-    ]
+    move = get_ai_move(
+        board,
+        difficulty
+    )
 
-    if not empty_cells:
+    if move is None:
         return
-
-    # ========================================================
-    # EASY MODE
-    # ========================================================
-
-    if difficulty == "EASY":
-
-        # Completely random move
-        move = random.choice(empty_cells)
-
-    # ========================================================
-    # MEDIUM MODE
-    # ========================================================
-
-    elif difficulty == "MEDIUM":
-
-        move = None
-
-        # ----------------------------------------------------
-        # 1. Try to WIN
-        # ----------------------------------------------------
-
-        for test_move in empty_cells:
-
-            board[test_move] = PLAYER_O
-
-            result, _ = check_winner()
-
-            board[test_move] = ""
-
-            if result == PLAYER_O:
-
-                move = test_move
-                break
-
-        # ----------------------------------------------------
-        # 2. Block PLAYER if about to win
-        # ----------------------------------------------------
-
-        if move is None:
-
-            for test_move in empty_cells:
-
-                board[test_move] = PLAYER_X
-
-                result, _ = check_winner()
-
-                board[test_move] = ""
-
-                if result == PLAYER_X:
-
-                    move = test_move
-                    break
-
-        # ----------------------------------------------------
-        # 3. Otherwise random
-        # ----------------------------------------------------
-
-        if move is None:
-
-            move = random.choice(empty_cells)
-
-    # ========================================================
-    # HARD MODE
-    # ========================================================
-
-    else:
-
-        best_score = -float("inf")
-        best_moves = []
-
-        for test_move in empty_cells:
-
-            board[test_move] = PLAYER_O
-
-            score = minimax(
-                board,
-                0,
-                False
-            )
-
-            board[test_move] = ""
-
-            if score > best_score:
-
-                best_score = score
-                best_moves = [test_move]
-
-            elif score == best_score:
-
-                best_moves.append(test_move)
-
-        move = random.choice(best_moves)
-
-    # ========================================================
-    # APPLY COMPUTER MOVE
-    # ========================================================
 
     board[move] = PLAYER_O
 
@@ -1106,7 +1012,7 @@ def computer_move():
 
     current_turn = PLAYER_X
 
-
+    
 def handle_board_click(position):
 
     mouse_x, mouse_y = position
