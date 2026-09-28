@@ -18,35 +18,50 @@ from src.constants import (
     DIFFICULTIES,
 )
 from src.game import Game
+from src.statistics import Statistics
 
 
 # ============================================================
 # BOARD SETTINGS
 # ============================================================
 
-BOARD_SIZE = 480
+BOARD_SIZE = 380
 CELL_SIZE = BOARD_SIZE // 3
 
 BOARD_X = (SCREEN_WIDTH - BOARD_SIZE) // 2
-BOARD_Y = 150
-
+BOARD_Y = 175
 
 # ============================================================
 # FONTS
 # ============================================================
 
-TITLE_FONT_SIZE = 42
-CELL_FONT_SIZE = 90
-INFO_FONT_SIZE = 24
-BUTTON_FONT_SIZE = 20
+TITLE_FONT_SIZE = 44
+CELL_FONT_SIZE = 82
+INFO_FONT_SIZE = 22
+STATUS_FONT_SIZE = 25
+CONTROL_FONT_SIZE = 17
+SCORE_FONT_SIZE = 20
+ROUND_FONT_SIZE = 20
 
 
 # ============================================================
-# DRAWING FUNCTIONS
+# UI POSITIONS
+# ============================================================
+
+TITLE_Y = 65
+DIFFICULTY_Y = 115
+ROUND_Y = 150
+BOARD_STATUS_Y = 575
+SCORE_Y = 630
+CONTROL_Y = 680
+
+
+# ============================================================
+# DRAW TITLE
 # ============================================================
 
 def draw_title(screen, font):
-    """Draw the game title."""
+    """Draw the main game title."""
 
     title = font.render(
         "TIC-TAC-TOE PRO",
@@ -54,12 +69,16 @@ def draw_title(screen, font):
         WHITE
     )
 
-    title_rect = title.get_rect(
-        center=(SCREEN_WIDTH // 2, 50)
+    rect = title.get_rect(
+        center=(SCREEN_WIDTH // 2, TITLE_Y)
     )
 
-    screen.blit(title, title_rect)
+    screen.blit(title, rect)
 
+
+# ============================================================
+# DRAW DIFFICULTY
+# ============================================================
 
 def draw_difficulty(screen, font, difficulty):
     """Display the current difficulty."""
@@ -70,17 +89,38 @@ def draw_difficulty(screen, font, difficulty):
         ACCENT_COLOR
     )
 
-    text_rect = text.get_rect(
-        center=(SCREEN_WIDTH // 2, 95)
+    rect = text.get_rect(
+        center=(SCREEN_WIDTH // 2, DIFFICULTY_Y)
     )
 
-    screen.blit(text, text_rect)
+    screen.blit(text, rect)
+
+
+# ============================================================
+# DRAW ROUND INFORMATION
+# ============================================================
+
+def draw_round_info(screen, font, statistics):
+    """Display the current round number."""
+
+    round_number = statistics.get_rounds_played() + 1
+
+    text = font.render(
+        f"ROUND {round_number}",
+        True,
+        WHITE
+    )
+
+    rect = text.get_rect(
+        center=(SCREEN_WIDTH // 2, ROUND_Y)
+    )
+
+    screen.blit(text, rect)
 
 
 def draw_board(screen, game):
-    """Draw the Tic-Tac-Toe board and player marks."""
+    """Draw the Tic-Tac-Toe board and winning-line highlight."""
 
-    # Draw board background.
     board_rect = pygame.Rect(
         BOARD_X,
         BOARD_Y,
@@ -88,14 +128,33 @@ def draw_board(screen, game):
         BOARD_SIZE
     )
 
+    # ========================================================
+    # BOARD BACKGROUND
+    # ========================================================
+
     pygame.draw.rect(
         screen,
         (18, 18, 35),
         board_rect,
-        border_radius=12
+        border_radius=14
     )
 
-    # Draw grid lines.
+    # ========================================================
+    # BOARD BORDER
+    # ========================================================
+
+    pygame.draw.rect(
+        screen,
+        ACCENT_COLOR,
+        board_rect,
+        width=2,
+        border_radius=14
+    )
+
+    # ========================================================
+    # GRID
+    # ========================================================
+
     for i in range(1, 3):
 
         x = BOARD_X + i * CELL_SIZE
@@ -117,7 +176,10 @@ def draw_board(screen, game):
             4
         )
 
-    # Draw player marks.
+    # ========================================================
+    # PLAYER MARKS
+    # ========================================================
+
     board_state = game.get_board_state()
 
     font = pygame.font.SysFont(
@@ -161,20 +223,80 @@ def draw_board(screen, game):
             center=(center_x, center_y)
         )
 
-        screen.blit(text, text_rect)
+        screen.blit(
+            text,
+            text_rect
+        )
 
+    # ========================================================
+    # WINNING LINE
+    # ========================================================
 
-def draw_status(screen, font, game, difficulty):
-    """Draw the current game status."""
+    if game.is_round_over and game.winning_positions:
+
+        winning_player = game.winner
+
+        if winning_player == PLAYER_X:
+            highlight_color = PLAYER_X_COLOR
+        else:
+            highlight_color = PLAYER_O_COLOR
+
+        first_position = game.winning_positions[0]
+        last_position = game.winning_positions[-1]
+
+        first_row = first_position // 3
+        first_col = first_position % 3
+
+        last_row = last_position // 3
+        last_col = last_position % 3
+
+        start_x = (
+            BOARD_X
+            + first_col * CELL_SIZE
+            + CELL_SIZE // 2
+        )
+
+        start_y = (
+            BOARD_Y
+            + first_row * CELL_SIZE
+            + CELL_SIZE // 2
+        )
+
+        end_x = (
+            BOARD_X
+            + last_col * CELL_SIZE
+            + CELL_SIZE // 2
+        )
+
+        end_y = (
+            BOARD_Y
+            + last_row * CELL_SIZE
+            + CELL_SIZE // 2
+        )
+
+        pygame.draw.line(
+            screen,
+            highlight_color,
+            (start_x, start_y),
+            (end_x, end_y),
+            8
+        )
+# ============================================================
+# DRAW GAME STATUS
+# ============================================================
+
+def draw_status(screen, font, game):
+    """Display winner, draw, or current turn."""
 
     if game.is_round_over:
 
         if game.winner:
-            message = f"{game.winner} WINS!"
 
             if game.winner == PLAYER_X:
+                message = "YOU WIN!"
                 color = PLAYER_X_COLOR
             else:
+                message = "AI WINS!"
                 color = PLAYER_O_COLOR
 
         else:
@@ -186,57 +308,134 @@ def draw_status(screen, font, game, difficulty):
         if game.get_current_player() == PLAYER_X:
             message = "YOUR TURN - X"
             color = PLAYER_X_COLOR
-
         else:
             message = "AI TURN - O"
             color = PLAYER_O_COLOR
 
-    status = font.render(
+    text = font.render(
         message,
         True,
         color
     )
 
-    status_rect = status.get_rect(
-        center=(SCREEN_WIDTH // 2, 660)
-    )
-
-    screen.blit(status, status_rect)
-
-    difficulty_text = font.render(
-        f"Mode: {difficulty}",
-        True,
-        WHITE
-    )
-
-    difficulty_rect = difficulty_text.get_rect(
-        center=(SCREEN_WIDTH // 2, 625)
+    rect = text.get_rect(
+        center=(SCREEN_WIDTH // 2, BOARD_STATUS_Y)
     )
 
     screen.blit(
-        difficulty_text,
-        difficulty_rect
+        text,
+        rect
     )
 
 
-def draw_restart_button(screen, font):
-    """Draw the restart instruction."""
+# ============================================================
+# DRAW SCOREBOARD
+# ============================================================
 
-    text = font.render(
-        "Press R to restart",
+def draw_scoreboard(screen, statistics, font):
+    """Draw the match scoreboard."""
+
+    scoreboard_width = 430
+    scoreboard_height = 50
+
+    scoreboard_x = (
+        SCREEN_WIDTH - scoreboard_width
+    ) // 2
+
+    scoreboard_y = 610
+
+    rect = pygame.Rect(
+        scoreboard_x,
+        scoreboard_y,
+        scoreboard_width,
+        scoreboard_height
+    )
+
+    pygame.draw.rect(
+        screen,
+        (18, 18, 35),
+        rect,
+        border_radius=12
+    )
+
+    pygame.draw.rect(
+        screen,
+        GRID_COLOR,
+        rect,
+        width=2,
+        border_radius=12
+    )
+
+    player_text = font.render(
+        f"YOU  {statistics.get_player_wins()}",
+        True,
+        PLAYER_X_COLOR
+    )
+
+    ai_text = font.render(
+        f"AI  {statistics.get_ai_wins()}",
+        True,
+        PLAYER_O_COLOR
+    )
+
+    draw_text = font.render(
+        f"DRAWS  {statistics.get_draws()}",
         True,
         WHITE
     )
 
-    rect = text.get_rect(
-        center=(SCREEN_WIDTH // 2, 125)
+    player_rect = player_text.get_rect(
+        center=(
+            scoreboard_x + 75,
+            scoreboard_y + scoreboard_height // 2
+        )
     )
 
-    screen.blit(text, rect)
+    ai_rect = ai_text.get_rect(
+        center=(
+            scoreboard_x + 215,
+            scoreboard_y + scoreboard_height // 2
+        )
+    )
+
+    draw_rect = draw_text.get_rect(
+        center=(
+            scoreboard_x + 350,
+            scoreboard_y + scoreboard_height // 2
+        )
+    )
+
+    screen.blit(player_text, player_rect)
+    screen.blit(ai_text, ai_rect)
+    screen.blit(draw_text, draw_rect)
 
 
 # ============================================================
-# MAIN GAME
+# DRAW CONTROLS
+# ============================================================
+
+def draw_controls(screen, font):
+    """Display keyboard controls."""
+
+    text = font.render(
+        "1 Easy    2 Medium    3 Hard    |    "
+        "R Restart    ESC Exit",
+        True,
+        (170, 170, 185)
+    )
+
+    rect = text.get_rect(
+        center=(SCREEN_WIDTH // 2, CONTROL_Y)
+    )
+
+    screen.blit(
+        text,
+        rect
+    )
+
+
+# ============================================================
+# MAIN
 # ============================================================
 
 def main():
@@ -265,18 +464,41 @@ def main():
         bold=True
     )
 
-    button_font = pygame.font.SysFont(
+    status_font = pygame.font.SysFont(
         "arial",
-        BUTTON_FONT_SIZE
+        STATUS_FONT_SIZE,
+        bold=True
+    )
+
+    control_font = pygame.font.SysFont(
+        "arial",
+        CONTROL_FONT_SIZE
+    )
+
+    score_font = pygame.font.SysFont(
+        "arial",
+        SCORE_FONT_SIZE,
+        bold=True
+    )
+
+    round_font = pygame.font.SysFont(
+        "arial",
+        ROUND_FONT_SIZE,
+        bold=True
     )
 
     game = Game()
+    statistics = Statistics()
+
+    result_recorded = False
 
     difficulty_index = DIFFICULTIES.index(
         DEFAULT_DIFFICULTY
     )
 
-    difficulty = DIFFICULTIES[difficulty_index]
+    difficulty = DIFFICULTIES[
+        difficulty_index
+    ]
 
     ai = AI(difficulty)
 
@@ -284,13 +506,17 @@ def main():
 
     while running:
 
+        # ====================================================
+        # EVENTS
+        # ====================================================
+
         for event in pygame.event.get():
 
             if event.type == pygame.QUIT:
                 running = False
 
             # ------------------------------------------------
-            # Mouse input
+            # Mouse
             # ------------------------------------------------
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -322,16 +548,19 @@ def main():
                         game.make_move(position)
 
             # ------------------------------------------------
-            # Keyboard input
+            # Keyboard
             # ------------------------------------------------
 
             elif event.type == pygame.KEYDOWN:
 
-                # Restart round.
+                # Restart round
                 if event.key == pygame.K_r:
+
                     game.reset_round()
 
-                # Change difficulty.
+                    result_recorded = False
+
+                # Cycle difficulty
                 elif event.key == pygame.K_d:
 
                     difficulty_index = (
@@ -339,7 +568,9 @@ def main():
                     ) % len(DIFFICULTIES)
 
                     difficulty = (
-                        DIFFICULTIES[difficulty_index]
+                        DIFFICULTIES[
+                            difficulty_index
+                        ]
                     )
 
                     ai.set_difficulty(
@@ -348,26 +579,48 @@ def main():
 
                     game.reset_round()
 
-                # Quick difficulty selection.
+                    result_recorded = False
+
+                # Easy
                 elif event.key == pygame.K_1:
 
                     difficulty = "EASY"
-                    ai.set_difficulty(difficulty)
+
+                    ai.set_difficulty(
+                        difficulty
+                    )
+
                     game.reset_round()
 
+                    result_recorded = False
+
+                # Medium
                 elif event.key == pygame.K_2:
 
                     difficulty = "MEDIUM"
-                    ai.set_difficulty(difficulty)
+
+                    ai.set_difficulty(
+                        difficulty
+                    )
+
                     game.reset_round()
 
+                    result_recorded = False
+
+                # Hard
                 elif event.key == pygame.K_3:
 
                     difficulty = "HARD"
-                    ai.set_difficulty(difficulty)
+
+                    ai.set_difficulty(
+                        difficulty
+                    )
+
                     game.reset_round()
 
-                # Escape closes the game.
+                    result_recorded = False
+
+                # Exit
                 elif event.key == pygame.K_ESCAPE:
                     running = False
 
@@ -378,17 +631,37 @@ def main():
         if (
             not game.is_round_over
             and game.get_current_player() == PLAYER_O
-           ):
+        ):
 
-            ai_move = ai.get_move(game.board)
+            ai_move = ai.get_move(
+                game.board
+            )
 
             if ai_move is not None:
                 game.make_move(ai_move)
+
+        # ====================================================
+        # RECORD RESULT
+        # ====================================================
+
+        if (
+            game.is_round_over
+            and not result_recorded
+        ):
+
+            statistics.record_result(
+                game.get_winner()
+            )
+
+            result_recorded = True
+
         # ====================================================
         # DRAW
         # ====================================================
 
-        screen.fill(BACKGROUND_COLOR)
+        screen.fill(
+            BACKGROUND_COLOR
+        )
 
         draw_title(
             screen,
@@ -401,9 +674,10 @@ def main():
             difficulty
         )
 
-        draw_restart_button(
+        draw_round_info(
             screen,
-            button_font
+            round_font,
+            statistics
         )
 
         draw_board(
@@ -413,9 +687,19 @@ def main():
 
         draw_status(
             screen,
-            info_font,
-            game,
-            difficulty
+            status_font,
+            game
+        )
+
+        draw_scoreboard(
+            screen,
+            statistics,
+            score_font
+        )
+
+        draw_controls(
+            screen,
+            control_font
         )
 
         pygame.display.flip()
