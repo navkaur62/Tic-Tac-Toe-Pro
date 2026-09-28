@@ -378,15 +378,12 @@ def main():
         if (
             not game.is_round_over
             and game.get_current_player() == PLAYER_O
-        ):
+           ):
 
-            ai_move = ai.get_move(
-                game.board
-            )
+            ai_move = ai.get_move(game.board)
 
             if ai_move is not None:
                 game.make_move(ai_move)
-
         # ====================================================
         # DRAW
         # ====================================================

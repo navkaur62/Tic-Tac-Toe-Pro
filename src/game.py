@@ -8,7 +8,9 @@ class Game:
     def __init__(self):
         self.board = Board()
 
-        self.current_player = PLAYER_X
+        # X starts the first round.
+        self.starting_player = PLAYER_X
+        self.current_player = self.starting_player
 
         self.winner = None
         self.winning_positions = []
@@ -17,11 +19,17 @@ class Game:
         self.is_draw = False
 
     def reset_round(self):
-        """Start a new round."""
+        """Start a new round with an alternating first player."""
 
         self.board.reset()
 
-        self.current_player = PLAYER_X
+        # Alternate the starting player.
+        if self.starting_player == PLAYER_X:
+            self.starting_player = PLAYER_O
+        else:
+            self.starting_player = PLAYER_X
+
+        self.current_player = self.starting_player
 
         self.winner = None
         self.winning_positions = []
